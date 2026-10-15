@@ -1,0 +1,16 @@
+{
+  "name": "Sroja D'Caprio Management System",
+  "short_name": "SrojaCaprio",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#212529",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
