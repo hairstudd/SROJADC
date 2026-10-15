@@ -311,7 +311,7 @@
 
         function submitTransaksi(e) {
             e.preventDefault();
-            let payload = {
+            let params = new URLSearchParams({
                 action: "simpanTransaksi",
                 outlet: document.getElementById('selectedOutlet').value,
                 tanggal: document.getElementById('trxTanggal').value,
@@ -320,51 +320,47 @@
                 kategori: document.getElementById('trxKategori').value,
                 tarif: document.getElementById('trxTarif').value,
                 metode: document.getElementById('trxMetode').value
-            };
-
-            fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(res => {
-                alert(res.message);
-                document.getElementById('formTransaksi').reset();
-                // Kembalikan tanggal dan jam ke waktu sekarang setelah reset
-                let today = new Date().toISOString().split('T')[0];
-                let nowTime = new Date().toTimeString().slice(0, 5);
-                document.getElementById('trxTanggal').value = today;
-                document.getElementById('trxJam').value = nowTime;
-                
-                // Segera refresh tabel transaksi harian agar langsung muncul
-                loadTransaksiHarian();
-            })
-            .catch(err => {
-                console.error("Error saving transaction:", err);
-                alert("Gagal menyimpan transaksi.");
             });
+
+            fetch(GAS_URL + "?" + params.toString(), { redirect: "follow" })
+                .then(res => res.json())
+                .then(res => {
+                    alert(res.message);
+                    document.getElementById('formTransaksi').reset();
+                    let today = new Date().toISOString().split('T')[0];
+                    let nowTime = new Date().toTimeString().slice(0, 5);
+                    document.getElementById('trxTanggal').value = today;
+                    document.getElementById('trxJam').value = nowTime;
+                    
+                    loadTransaksiHarian();
+                })
+                .catch(err => {
+                    console.error("Error saving transaction:", err);
+                    alert("Gagal menyimpan transaksi.");
+                });
         }
 
         function submitPengeluaran(e) {
             e.preventDefault();
-            let payload = {
+            let params = new URLSearchParams({
                 action: "simpanPengeluaran",
                 outlet: document.getElementById('selectedOutlet').value,
                 tanggal: document.getElementById('expTanggal').value,
                 nominal: document.getElementById('expNominal').value,
                 sumber: document.getElementById('expSumber').value
-            };
-
-            fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(res => {
-                alert(res.message);
-                document.getElementById('formPengeluaran').reset();
-                document.getElementById('expTanggal').value = new Date().toISOString().split('T')[0];
             });
+
+            fetch(GAS_URL + "?" + params.toString(), { redirect: "follow" })
+                .then(res => res.json())
+                .then(res => {
+                    alert(res.message);
+                    document.getElementById('formPengeluaran').reset();
+                    document.getElementById('expTanggal').value = new Date().toISOString().split('T')[0];
+                })
+                .catch(err => {
+                    console.error("Error saving expense:", err);
+                    alert("Gagal menyimpan pengeluaran.");
+                });
         }
 
         function loadTransaksiHarian() {
@@ -406,21 +402,22 @@
 
         function updateTarif(rowIdx) {
             let tarifBaru = document.getElementById(`editTarif-${rowIdx}`).value;
-            let payload = {
+            let params = new URLSearchParams({
                 action: "updateTarifTransaksi",
                 rowIdx: rowIdx,
                 tarifBaru: tarifBaru
-            };
-
-            fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(res => {
-                alert(res.message);
-                loadTransaksiHarian();
             });
+
+            fetch(GAS_URL + "?" + params.toString(), { redirect: "follow" })
+                .then(res => res.json())
+                .then(res => {
+                    alert(res.message);
+                    loadTransaksiHarian();
+                })
+                .catch(err => {
+                    console.error("Error updating tariff:", err);
+                    alert("Gagal memperbarui tarif.");
+                });
         }
 
         function loadRekap() {
