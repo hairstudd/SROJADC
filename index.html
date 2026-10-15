@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="icon.png">
-    <meta name="theme-color" content="#212529">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SROJA D'CAPRIO - Kasir Transaksi</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon.png">
+    <meta name="theme-color" content="#212529">
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark shadow-sm">
@@ -227,11 +227,18 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyKoRUhTGog2lzNsCSVIkNKpZtcenhl-9p4vgZOsKDfswWVKwS1BWhZESjXOJbWqk-V/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxuEu_A9F_tFB6w8YSUlzVYSZ3uOfEZjd5-RUBGIUSVwI4k4tMsRhrfGt95bWjOyyHv/exec"; 
 
-        let globalCapsterData = {};
-        let globalTarifData = {};
-        let isDataLoaded = false;
+        // Fallback data statis agar halaman langsung terbuka tanpa menunggu fetch pertama
+        let globalCapsterData = {
+            "SROJA": ["Sade", "Asep"],
+            "D'CAPRIO": ["Imam"]
+        };
+        let globalTarifData = {
+            "SROJA": { "Dewasa": 40000, "Anak": 35000 },
+            "D'CAPRIO": { "Dewasa": 30000, "Remaja": 25000, "Anak": 20000 }
+        };
+        let isDataLoaded = true; // Langsung aktif secara instan
 
         window.onload = function() {
             let today = new Date().toISOString().split('T')[0];
@@ -243,17 +250,27 @@
             document.getElementById('rekapTanggal').value = today;
             document.getElementById('lapBulan').value = today.slice(0, 7);
 
+            // Cek apakah ada cache data tersimpan sebelumnya di browser
+            let cachedCapster = localStorage.getItem('sroja_capster');
+            let cachedTarif = localStorage.getItem('sroja_tarif');
+            
+            if (cachedCapster && cachedTarif) {
+                globalCapsterData = JSON.parse(cachedCapster);
+                globalTarifData = JSON.parse(cachedTarif);
+            }
+
+            // Sync data terbaru secara diam-diam di background (non-blocking)
             fetch(GAS_URL + "?action=getAppData")
                 .then(response => response.json())
                 .then(data => {
-                    globalCapsterData = data.capsterMap;
-                    globalTarifData = data.tarifMap;
-                    isDataLoaded = true;
-
-                    let currentOutlet = document.getElementById('selectedOutlet').value;
-                    if(currentOutlet) lockOutlet();
+                    if(data && data.capsterMap) {
+                        globalCapsterData = data.capsterMap;
+                        globalTarifData = data.tarifMap;
+                        localStorage.setItem('sroja_capster', JSON.stringify(data.capsterMap));
+                        localStorage.setItem('sroja_tarif', JSON.stringify(data.tarifMap));
+                    }
                 })
-                .catch(err => console.error("Gagal memuat data dari GAS:", err));
+                .catch(err => console.log("Background sync offline/skipped"));
         }
 
         function lockOutlet() {
@@ -262,11 +279,6 @@
             
             if (!outlet) {
                 formSec.style.display = 'none';
-                return;
-            }
-
-            if (!isDataLoaded) {
-                alert("Data sistem sedang dimuat, silakan pilih outlet kembali dalam 1 detik.");
                 return;
             }
 
@@ -414,7 +426,6 @@
                 .catch(err => console.error("Gagal memuat transaksi harian:", err));
         }
 
-        // Fungsi otomatis mengubah tarif saat kategori diubah pada baris tabel harian
         function onEditKategoriChange(rowIdx) {
             let outlet = document.getElementById('selectedOutlet').value;
             let kategoriBaru = document.getElementById(`editKategori-${rowIdx}`).value;
@@ -425,7 +436,6 @@
             }
         }
 
-        // Fungsi Update Kategori, Tarif, dan Metode Pembayaran Sekaligus
         function updateTransaksi(rowIdx) {
             let kategoriBaru = document.getElementById(`editKategori-${rowIdx}`).value;
             let tarifBaru = document.getElementById(`editTarif-${rowIdx}`).value;
@@ -473,11 +483,11 @@
                             let tr = document.createElement('tr');
                             tr.innerHTML = `
                                 <td>${row.tanggal}</td>
-                                <td>${row.jam}</td>
-                                <td>${row.capster}</td>
-                                <td>${row.kategori}</td>
-                                <td>Rp ${row.tarif.toLocaleString()}</td>
-                                <td>${row.metode}</td>
+                            <td>${row.jam}</td>
+                            <td>${row.capster}</td>
+                            <td>${row.kategori}</td>
+                            <td>Rp ${row.tarif.toLocaleString()}</td>
+                            <td>${row.metode}</td>
                             `;
                             tbody.appendChild(tr);
                         });
