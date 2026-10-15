@@ -17,24 +17,23 @@
     <div class="container my-4">
         <!-- NAV TABS -->
         <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="input-tab" data-bs-toggle="tab" data-bs-target="#input-pane" type="button" role="tab">1. Input Transaksi & Pengeluaran</button>
+            <li class="nav-item">
+                <button class="nav-link active" id="input-tab" data-bs-toggle="tab" data-bs-target="#input-pane" type="button">1. Input Transaksi & Pengeluaran</button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="rekap-tab" data-bs-toggle="tab" data-bs-target="#rekap-pane" type="button" role="tab">2. Rekapitulasi Harian</button>
+            <li class="nav-item">
+                <button class="nav-link" id="rekap-tab" data-bs-toggle="tab" data-bs-target="#rekap-pane" type="button">2. Rekapitulasi Harian</button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="laporan-tab" data-bs-toggle="tab" data-bs-target="#laporan-pane" type="button" role="tab">3. Laporan Bulanan</button>
+            <li class="nav-item">
+                <button class="nav-link" id="laporan-tab" data-bs-toggle="tab" data-bs-target="#laporan-pane" type="button">3. Laporan Bulanan</button>
             </li>
         </ul>
 
-        <div class="tab-content bg-white p-4 border border-top-0 rounded-bottom shadow-sm" id="myTabContent">
+        <div class="tab-content bg-white p-4 border border-top-0 rounded-bottom shadow-sm">
             
             <!-- TAB 1: INPUT TRANSAKSI -->
-            <div class="tab-pane fade show active" id="input-pane" role="tabpanel">
+            <div class="tab-pane fade show active" id="input-pane">
                 <h4 class="mb-3">Formulir Kasir & Operasional</h4>
                 
-                <!-- Pilih Outlet (Kunci) -->
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Pilih Outlet:</label>
@@ -49,13 +48,16 @@
                 <div id="formSection" style="display:none;">
                     <hr>
                     <div class="row">
-                        <!-- Input Transaksi Customer -->
                         <div class="col-md-7 border-end">
                             <h5 class="text-primary">Catat Transaksi Penjualan</h5>
                             <form id="formTransaksi" onsubmit="submitTransaksi(event)">
                                 <div class="mb-3">
                                     <label class="form-label">Tanggal Transaksi:</label>
                                     <input type="date" id="trxTanggal" class="form-control" onchange="loadTransaksiHarian()" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Jam Transaksi:</label>
+                                    <input type="time" id="trxJam" class="form-control" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Nama Capster:</label>
@@ -72,7 +74,6 @@
                                 <div class="mb-3">
                                     <label class="form-label">Tarif (Rp):</label>
                                     <input type="number" id="trxTarif" class="form-control" required readonly style="background-color: #e9ecef;">
-                                    <small class="text-muted">*Tarif otomatis terisi. Anda dapat mengedit nominalnya pada tabel di bawah jika ada penyesuaian.</small>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Metode Pembayaran:</label>
@@ -85,7 +86,6 @@
                             </form>
                         </div>
 
-                        <!-- Input Pengeluaran Operasional -->
                         <div class="col-md-5">
                             <h5 class="text-danger">Catat Pengeluaran Operasional</h5>
                             <form id="formPengeluaran" onsubmit="submitPengeluaran(event)">
@@ -128,7 +128,7 @@
             </div>
 
             <!-- TAB 2: REKAPITULASI -->
-            <div class="tab-pane fade" id="rekap-pane" role="tabpanel">
+            <div class="tab-pane fade" id="rekap-pane">
                 <h4 class="mb-3">Rekapitulasi Harian</h4>
                 <div class="row mb-3">
                     <div class="col-md-3">
@@ -174,7 +174,7 @@
             </div>
 
             <!-- TAB 3: LAPORAN BULANAN -->
-            <div class="tab-pane fade" id="laporan-pane" role="tabpanel">
+            <div class="tab-pane fade" id="laporan-pane">
                 <h4 class="mb-3">Laporan Omzet & Keuangan Bulanan</h4>
                 <div class="row mb-3">
                     <div class="col-md-3">
@@ -225,27 +225,34 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // TEMPELKAN WEB APP URL HASIL DEPLOY GOOGLE APPS SCRIPT ANDA DI SINI
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzNDSJ35ES6wjNWTS__i2HBGK41p5qpfnhyISYis5Jhh6mtLok4Yc_Fg898GcsNF7VL/exec"; 
+
         let globalCapsterData = {};
         let globalTarifData = {};
         let isDataLoaded = false;
 
         window.onload = function() {
             let today = new Date().toISOString().split('T')[0];
+            let nowTime = new Date().toTimeString().slice(0, 5); // Format HH:mm
+
             document.getElementById('trxTanggal').value = today;
+            document.getElementById('trxJam').value = nowTime;
             document.getElementById('expTanggal').value = today;
             document.getElementById('rekapTanggal').value = today;
             document.getElementById('lapBulan').value = today.slice(0, 7);
 
-            google.script.run.withSuccessHandler(function(data) {
-                globalCapsterData = data.capsterMap;
-                globalTarifData = data.tarifMap;
-                isDataLoaded = true;
-                
-                let currentOutlet = document.getElementById('selectedOutlet').value;
-                if(currentOutlet) {
-                    lockOutlet();
-                }
-            }).getAppData();
+            fetch(GAS_URL + "?action=getAppData")
+                .then(response => response.json())
+                .then(data => {
+                    globalCapsterData = data.capsterMap;
+                    globalTarifData = data.tarifMap;
+                    isDataLoaded = true;
+
+                    let currentOutlet = document.getElementById('selectedOutlet').value;
+                    if(currentOutlet) lockOutlet();
+                })
+                .catch(err => console.error("Gagal memuat data dari GAS:", err));
         }
 
         function lockOutlet() {
@@ -264,7 +271,6 @@
 
             formSec.style.display = 'block';
             
-            // Populate Capster
             let capsterSelect = document.getElementById('trxCapster');
             capsterSelect.innerHTML = '<option value="">-- Pilih Capster --</option>';
             if (globalCapsterData[outlet]) {
@@ -276,7 +282,6 @@
                 });
             }
 
-            // Populate Kategori & Tarif info
             let kategoriSelect = document.getElementById('trxKategori');
             kategoriSelect.innerHTML = '<option value="">-- Pilih Kategori --</option>';
             if (globalTarifData[outlet]) {
@@ -306,110 +311,159 @@
 
         function submitTransaksi(e) {
             e.preventDefault();
-            let data = {
+            let payload = {
+                action: "simpanTransaksi",
                 outlet: document.getElementById('selectedOutlet').value,
                 tanggal: document.getElementById('trxTanggal').value,
+                jam: document.getElementById('trxJam').value,
                 capster: document.getElementById('trxCapster').value,
                 kategori: document.getElementById('trxKategori').value,
                 tarif: document.getElementById('trxTarif').value,
                 metode: document.getElementById('trxMetode').value
             };
 
-            google.script.run.withSuccessHandler(function(res) {
+            fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
                 alert(res.message);
                 document.getElementById('formTransaksi').reset();
-                document.getElementById('trxTanggal').value = new Date().toISOString().split('T')[0];
-                lockOutlet(); 
-            }).simpanTransaksi(data);
+                // Kembalikan tanggal dan jam ke waktu sekarang setelah reset
+                let today = new Date().toISOString().split('T')[0];
+                let nowTime = new Date().toTimeString().slice(0, 5);
+                document.getElementById('trxTanggal').value = today;
+                document.getElementById('trxJam').value = nowTime;
+                
+                // Segera refresh tabel transaksi harian agar langsung muncul
+                loadTransaksiHarian();
+            })
+            .catch(err => {
+                console.error("Error saving transaction:", err);
+                alert("Gagal menyimpan transaksi.");
+            });
         }
 
         function submitPengeluaran(e) {
             e.preventDefault();
-            let data = {
+            let payload = {
+                action: "simpanPengeluaran",
                 outlet: document.getElementById('selectedOutlet').value,
                 tanggal: document.getElementById('expTanggal').value,
                 nominal: document.getElementById('expNominal').value,
                 sumber: document.getElementById('expSumber').value
             };
 
-            google.script.run.withSuccessHandler(function(res) {
+            fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
                 alert(res.message);
                 document.getElementById('formPengeluaran').reset();
                 document.getElementById('expTanggal').value = new Date().toISOString().split('T')[0];
-            }).simpanPengeluaran(data);
+            });
         }
 
         function loadTransaksiHarian() {
             let outlet = document.getElementById('selectedOutlet').value;
             let tanggal = document.getElementById('trxTanggal').value;
+            if(!outlet || !tanggal) return;
 
-            google.script.run.withSuccessHandler(function(data) {
-                let tbody = document.querySelector('#tabelTransaksiHarian tbody');
-                tbody.innerHTML = '';
-                data.forEach(row => {
-                    let tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${row.tanggal}</td>
-                        <td>${row.jam}</td>
-                        <td>${row.capster}</td>
-                        <td>${row.kategori}</td>
-                        <td><input type="number" id="editTarif-${row.rowIdx}" value="${row.tarif}" class="form-control form-control-sm" style="width: 110px;"></td>
-                        <td>${row.metode}</td>
-                        <td><button class="btn btn-sm btn-warning" onclick="updateTarif(${row.rowIdx})">Ubah Tarif</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }).getTransaksiHarian(outlet, tanggal);
+            fetch(GAS_URL + `?action=getTransaksiHarian&outlet=${encodeURIComponent(outlet)}&tanggal=${tanggal}`)
+                .then(res => res.json())
+                .then(data => {
+                    let tbody = document.querySelector('#tabelTransaksiHarian tbody');
+                    tbody.innerHTML = '';
+                    if(data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Belum ada transaksi pada tanggal ini.</td></tr>`;
+                        return;
+                    }
+                    data.forEach(row => {
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${row.tanggal}</td>
+                            <td>${row.jam}</td>
+                            <td>${row.capster}</td>
+                            <td>${row.kategori}</td>
+                            <td><input type="number" id="editTarif-${row.rowIdx}" value="${row.tarif}" class="form-control form-control-sm" style="width: 110px;"></td>
+                            <td>${row.metode}</td>
+                            <td><button class="type="button" class="btn btn-sm btn-warning" onclick="updateTarif(${row.rowIdx})">Ubah Tarif</button></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => console.error("Gagal memuat transaksi harian:", err));
         }
 
         function updateTarif(rowIdx) {
             let tarifBaru = document.getElementById(`editTarif-${rowIdx}`).value;
-            google.script.run.withSuccessHandler(function(res) {
+            let payload = {
+                action: "updateTarifTransaksi",
+                rowIdx: rowIdx,
+                tarifBaru: tarifBaru
+            };
+
+            fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
                 alert(res.message);
                 loadTransaksiHarian();
-            }).updateTarifTransaksi(rowIdx, tarifBaru);
+            });
         }
 
         function loadRekap() {
             let outlet = document.getElementById('rekapOutlet').value;
             let tanggal = document.getElementById('rekapTanggal').value;
 
-            google.script.run.withSuccessHandler(function(res) {
-                let tbody = document.querySelector('#tabelRekap tbody');
-                tbody.innerHTML = '';
-                res.transaksi.forEach(row => {
-                    let tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${row.tanggal}</td>
-                        <td>${row.jam}</td>
-                        <td>${row.capster}</td>
-                        <td>${row.kategori}</td>
-                        <td>Rp ${row.tarif.toLocaleString()}</td>
-                        <td>${row.metode}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+            fetch(GAS_URL + `?action=getRekapitulasi&outlet=${encodeURIComponent(outlet)}&tanggal=${tanggal}`)
+                .then(res => res.json())
+                .then(res => {
+                    let tbody = document.querySelector('#tabelRekap tbody');
+                    tbody.innerHTML = '';
+                    if(res.transaksi.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Tidak ada data rekap.</td></tr>`;
+                    }
+                    res.transaksi.forEach(row => {
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${row.tanggal}</td>
+                            <td>${row.jam}</td>
+                            <td>${row.capster}</td>
+                            <td>${row.kategori}</td>
+                            <td>Rp ${row.tarif.toLocaleString()}</td>
+                            <td>${row.metode}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
 
-                document.getElementById('rekapTotalOmzet').innerText = res.totalOmzet.toLocaleString();
-                document.getElementById('rekapCash').innerText = res.omzetCash.toLocaleString();
-                document.getElementById('rekapQris').innerText = res.omzetQris.toLocaleString();
-                document.getElementById('countDewasa').innerText = res.customerCount.dewasa;
-                document.getElementById('countRemaja').innerText = res.customerCount.remaja;
-                document.getElementById('countAnak').innerText = res.customerCount.anak;
-            }).getRekapitulasi(outlet, tanggal);
+                    document.getElementById('rekapTotalOmzet').innerText = res.totalOmzet.toLocaleString();
+                    document.getElementById('rekapCash').innerText = res.omzetCash.toLocaleString();
+                    document.getElementById('rekapQris').innerText = res.omzetQris.toLocaleString();
+                    document.getElementById('countDewasa').innerText = res.customerCount.dewasa;
+                    document.getElementById('countRemaja').innerText = res.customerCount.remaja;
+                    document.getElementById('countAnak').innerText = res.customerCount.anak;
+                });
         }
 
         function loadLaporan() {
             let outlet = document.getElementById('lapOutlet').value;
             let bulanTahun = document.getElementById('lapBulan').value;
 
-            google.script.run.withSuccessHandler(function(res) {
-                document.getElementById('lapOmzet').innerText = res.omzetTotal.toLocaleString();
-                document.getElementById('lapKomisi').innerText = res.komisiCapster.toLocaleString();
-                document.getElementById('lapKotor').innerText = res.pendapatanKotor.toLocaleString();
-                document.getElementById('lapPengeluaran').innerText = res.pengeluaran.toLocaleString();
-                document.getElementById('lapBersih').innerText = res.pendapatanBersih.toLocaleString();
-            }).getLaporanBulanan(outlet, bulanTahun);
+            fetch(GAS_URL + `?action=getLaporanBulanan&outlet=${encodeURIComponent(outlet)}&bulanTahun=${bulanTahun}`)
+                .then(res => res.json())
+                .then(res => {
+                    document.getElementById('lapOmzet').innerText = res.omzetTotal.toLocaleString();
+                    document.getElementById('lapKomisi').innerText = res.komisiCapster.toLocaleString();
+                    document.getElementById('lapKotor').innerText = res.pendapatanKotor.toLocaleString();
+                    document.getElementById('lapPengeluaran').innerText = res.pengeluaran.toLocaleString();
+                    document.getElementById('lapBersih').innerText = res.pendapatanBersih.toLocaleString();
+                });
         }
     </script>
 </body>
