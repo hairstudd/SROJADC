@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SROJA D'CAPRIO - Kasir Transaksi</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">💈 SROJA D'CAPRIO Management System</span>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- NAV TABS -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="input-tab" data-bs-toggle="tab" data-bs-target="#input-pane" type="button" role="tab">1. Input Transaksi & Pengeluaran</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rekap-tab" data-bs-toggle="tab" data-bs-target="#rekap-pane" type="button" role="tab">2. Rekapitulasi Harian</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="laporan-tab" data-bs-toggle="tab" data-bs-target="#laporan-pane" type="button" role="tab">3. Laporan Bulanan</button>
+            </li>
+        </ul>
+
+        <div class="tab-content bg-white p-4 border border-top-0 rounded-bottom shadow-sm" id="myTabContent">
+            
+            <!-- TAB 1: INPUT TRANSAKSI -->
+            <div class="tab-pane fade show active" id="input-pane" role="tabpanel">
+                <h4 class="mb-3">Formulir Kasir & Operasional</h4>
+                
+                <!-- Pilih Outlet (Kunci) -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Pilih Outlet:</label>
+                        <select id="selectedOutlet" class="form-select" onchange="lockOutlet()">
+                            <option value="">-- Pilih Outlet --</option>
+                            <option value="SROJA">SROJA</option>
+                            <option value="D'CAPRIO">D'CAPRIO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="formSection" style="display:none;">
+                    <hr>
+                    <div class="row">
+                        <!-- Input Transaksi Customer -->
+                        <div class="col-md-7 border-end">
+                            <h5 class="text-primary">Catat Transaksi Penjualan</h5>
+                            <form id="formTransaksi" onsubmit="submitTransaksi(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Tanggal Transaksi:</label>
+                                    <input type="date" id="trxTanggal" class="form-control" onchange="loadTransaksiHarian()" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Nama Capster:</label>
+                                    <select id="trxCapster" class="form-select" required>
+                                        <option value="">-- Pilih Capster --</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Kategori Customer:</label>
+                                    <select id="trxKategori" class="form-select" onchange="updateTarifOtomatis()" required>
+                                        <option value="">-- Pilih Kategori --</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tarif (Rp):</label>
+                                    <input type="number" id="trxTarif" class="form-control" required readonly style="background-color: #e9ecef;">
+                                    <small class="text-muted">*Tarif otomatis terisi. Anda dapat mengedit nominalnya pada tabel di bawah jika ada penyesuaian.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Metode Pembayaran:</label>
+                                    <select id="trxMetode" class="form-select" required>
+                                        <option value="Cash">Cash</option>
+                                        <option value="QRIS">QRIS</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Simpan Transaksi</button>
+                            </form>
+                        </div>
+
+                        <!-- Input Pengeluaran Operasional -->
+                        <div class="col-md-5">
+                            <h5 class="text-danger">Catat Pengeluaran Operasional</h5>
+                            <form id="formPengeluaran" onsubmit="submitPengeluaran(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Tanggal Pengeluaran:</label>
+                                    <input type="date" id="expTanggal" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Nominal (Rp):</label>
+                                    <input type="number" id="expNominal" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Sumber Pengeluaran / Keterangan:</label>
+                                    <input type="text" id="expSumber" class="form-control" placeholder="Contoh: Beli Silet / Kas Kecil" required>
+                                </div>
+                                <button type="submit" class="btn btn-danger">Simpan Pengeluaran</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h5>Daftar Transaksi Hari Berjalan</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="tabelTransaksiHarian">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Jam</th>
+                                    <th>Capster</th>
+                                    <th>Kategori</th>
+                                    <th>Tarif (Rp)</th>
+                                    <th>Metode</th>
+                                    <th>Aksi Edit Tarif</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: REKAPITULASI -->
+            <div class="tab-pane fade" id="rekap-pane" role="tabpanel">
+                <h4 class="mb-3">Rekapitulasi Harian</h4>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Pilih Outlet:</label>
+                        <select id="rekapOutlet" class="form-select">
+                            <option value="SROJA">SROJA</option>
+                            <option value="D'CAPRIO">D'CAPRIO</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Pilih Tanggal:</label>
+                        <input type="date" id="rekapTanggal" class="form-control">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-success w-100" onclick="loadRekap()">Tampilkan</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="tabelRekap">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jam</th>
+                                <th>Capster</th>
+                                <th>Kategori</th>
+                                <th>Tarif</th>
+                                <th>Metode</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="card bg-light p-3 mt-3">
+                    <h5>Ringkasan Rekap:</h5>
+                    <p class="mb-1"><strong>Total Omzet:</strong> Rp <span id="rekapTotalOmzet">0</span></p>
+                    <p class="mb-1">- Omzet Cash: Rp <span id="rekapCash">0</span></p>
+                    <p class="mb-1">- Omzet QRIS: Rp <span id="rekapQris">0</span></p>
+                    <hr>
+                    <p class="mb-0"><strong>Jumlah Customer:</strong> Dewasa (<span id="countDewasa">0</span>), Remaja (<span id="countRemaja">0</span>), Anak (<span id="countAnak">0</span>)</p>
+                </div>
+            </div>
+
+            <!-- TAB 3: LAPORAN BULANAN -->
+            <div class="tab-pane fade" id="laporan-pane" role="tabpanel">
+                <h4 class="mb-3">Laporan Omzet & Keuangan Bulanan</h4>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Pilih Outlet:</label>
+                        <select id="lapOutlet" class="form-select">
+                            <option value="SROJA">SROJA</option>
+                            <option value="D'CAPRIO">D'CAPRIO</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Pilih Bulan:</label>
+                        <input type="month" id="lapBulan" class="form-control">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="loadLaporan()">Generate Laporan</button>
+                    </div>
+                </div>
+
+                <div class="card p-4 border-primary">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td>Total Omzet Bulan Berjalan</td>
+                            <td>: Rp <span id="lapOmzet">0</span></td>
+                        </tr>
+                        <tr>
+                            <td>Komisi Capster (40%)</td>
+                            <td>: (Rp <span id="lapKomisi">0</span>)</td>
+                        </tr>
+                        <tr class="table-active">
+                            <td><strong>Pendapatan Kotor (Omzet - Komisi)</strong></td>
+                            <td>: <strong>Rp <span id="lapKotor">0</span></strong></td>
+                        </tr>
+                        <tr>
+                            <td>Total Pengeluaran Operasional</td>
+                            <td>: (Rp <span id="lapPengeluaran">0</span>)</td>
+                        </tr>
+                        <tr class="table-success">
+                            <td><strong>Pendapatan Bersih</strong></td>
+                            <td>: <strong>Rp <span id="lapBersih">0</span></strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let globalCapsterData = {};
+        let globalTarifData = {};
+        let isDataLoaded = false;
+
+        window.onload = function() {
+            let today = new Date().toISOString().split('T')[0];
+            document.getElementById('trxTanggal').value = today;
+            document.getElementById('expTanggal').value = today;
+            document.getElementById('rekapTanggal').value = today;
+            document.getElementById('lapBulan').value = today.slice(0, 7);
+
+            google.script.run.withSuccessHandler(function(data) {
+                globalCapsterData = data.capsterMap;
+                globalTarifData = data.tarifMap;
+                isDataLoaded = true;
+                
+                let currentOutlet = document.getElementById('selectedOutlet').value;
+                if(currentOutlet) {
+                    lockOutlet();
+                }
+            }).getAppData();
+        }
+
+        function lockOutlet() {
+            let outlet = document.getElementById('selectedOutlet').value;
+            let formSec = document.getElementById('formSection');
+            
+            if (!outlet) {
+                formSec.style.display = 'none';
+                return;
+            }
+
+            if (!isDataLoaded) {
+                alert("Data sistem sedang dimuat, silakan pilih outlet kembali dalam 1 detik.");
+                return;
+            }
+
+            formSec.style.display = 'block';
+            
+            // Populate Capster
+            let capsterSelect = document.getElementById('trxCapster');
+            capsterSelect.innerHTML = '<option value="">-- Pilih Capster --</option>';
+            if (globalCapsterData[outlet]) {
+                globalCapsterData[outlet].forEach(function(capster) {
+                    let opt = document.createElement('option');
+                    opt.value = capster;
+                    opt.innerText = capster;
+                    capsterSelect.appendChild(opt);
+                });
+            }
+
+            // Populate Kategori & Tarif info
+            let kategoriSelect = document.getElementById('trxKategori');
+            kategoriSelect.innerHTML = '<option value="">-- Pilih Kategori --</option>';
+            if (globalTarifData[outlet]) {
+                Object.keys(globalTarifData[outlet]).forEach(function(kategori) {
+                    let opt = document.createElement('option');
+                    opt.value = kategori;
+                    opt.innerText = kategori + ' (Rp ' + globalTarifData[outlet][kategori].toLocaleString() + ')';
+                    kategoriSelect.appendChild(opt);
+                });
+            }
+
+            document.getElementById('trxTarif').value = '';
+            loadTransaksiHarian();
+        }
+
+        function updateTarifOtomatis() {
+            let outlet = document.getElementById('selectedOutlet').value;
+            let kategori = document.getElementById('trxKategori').value;
+            let tarifInput = document.getElementById('trxTarif');
+
+            if (outlet && kategori && globalTarifData[outlet] && globalTarifData[outlet][kategori] !== undefined) {
+                tarifInput.value = globalTarifData[outlet][kategori];
+            } else {
+                tarifInput.value = 0;
+            }
+        }
+
+        function submitTransaksi(e) {
+            e.preventDefault();
+            let data = {
+                outlet: document.getElementById('selectedOutlet').value,
+                tanggal: document.getElementById('trxTanggal').value,
+                capster: document.getElementById('trxCapster').value,
+                kategori: document.getElementById('trxKategori').value,
+                tarif: document.getElementById('trxTarif').value,
+                metode: document.getElementById('trxMetode').value
+            };
+
+            google.script.run.withSuccessHandler(function(res) {
+                alert(res.message);
+                document.getElementById('formTransaksi').reset();
+                document.getElementById('trxTanggal').value = new Date().toISOString().split('T')[0];
+                lockOutlet(); 
+            }).simpanTransaksi(data);
+        }
+
+        function submitPengeluaran(e) {
+            e.preventDefault();
+            let data = {
+                outlet: document.getElementById('selectedOutlet').value,
+                tanggal: document.getElementById('expTanggal').value,
+                nominal: document.getElementById('expNominal').value,
+                sumber: document.getElementById('expSumber').value
+            };
+
+            google.script.run.withSuccessHandler(function(res) {
+                alert(res.message);
+                document.getElementById('formPengeluaran').reset();
+                document.getElementById('expTanggal').value = new Date().toISOString().split('T')[0];
+            }).simpanPengeluaran(data);
+        }
+
+        function loadTransaksiHarian() {
+            let outlet = document.getElementById('selectedOutlet').value;
+            let tanggal = document.getElementById('trxTanggal').value;
+
+            google.script.run.withSuccessHandler(function(data) {
+                let tbody = document.querySelector('#tabelTransaksiHarian tbody');
+                tbody.innerHTML = '';
+                data.forEach(row => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.tanggal}</td>
+                        <td>${row.jam}</td>
+                        <td>${row.capster}</td>
+                        <td>${row.kategori}</td>
+                        <td><input type="number" id="editTarif-${row.rowIdx}" value="${row.tarif}" class="form-control form-control-sm" style="width: 110px;"></td>
+                        <td>${row.metode}</td>
+                        <td><button class="btn btn-sm btn-warning" onclick="updateTarif(${row.rowIdx})">Ubah Tarif</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }).getTransaksiHarian(outlet, tanggal);
+        }
+
+        function updateTarif(rowIdx) {
+            let tarifBaru = document.getElementById(`editTarif-${rowIdx}`).value;
+            google.script.run.withSuccessHandler(function(res) {
+                alert(res.message);
+                loadTransaksiHarian();
+            }).updateTarifTransaksi(rowIdx, tarifBaru);
+        }
+
+        function loadRekap() {
+            let outlet = document.getElementById('rekapOutlet').value;
+            let tanggal = document.getElementById('rekapTanggal').value;
+
+            google.script.run.withSuccessHandler(function(res) {
+                let tbody = document.querySelector('#tabelRekap tbody');
+                tbody.innerHTML = '';
+                res.transaksi.forEach(row => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.tanggal}</td>
+                        <td>${row.jam}</td>
+                        <td>${row.capster}</td>
+                        <td>${row.kategori}</td>
+                        <td>Rp ${row.tarif.toLocaleString()}</td>
+                        <td>${row.metode}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('rekapTotalOmzet').innerText = res.totalOmzet.toLocaleString();
+                document.getElementById('rekapCash').innerText = res.omzetCash.toLocaleString();
+                document.getElementById('rekapQris').innerText = res.omzetQris.toLocaleString();
+                document.getElementById('countDewasa').innerText = res.customerCount.dewasa;
+                document.getElementById('countRemaja').innerText = res.customerCount.remaja;
+                document.getElementById('countAnak').innerText = res.customerCount.anak;
+            }).getRekapitulasi(outlet, tanggal);
+        }
+
+        function loadLaporan() {
+            let outlet = document.getElementById('lapOutlet').value;
+            let bulanTahun = document.getElementById('lapBulan').value;
+
+            google.script.run.withSuccessHandler(function(res) {
+                document.getElementById('lapOmzet').innerText = res.omzetTotal.toLocaleString();
+                document.getElementById('lapKomisi').innerText = res.komisiCapster.toLocaleString();
+                document.getElementById('lapKotor').innerText = res.pendapatanKotor.toLocaleString();
+                document.getElementById('lapPengeluaran').innerText = res.pengeluaran.toLocaleString();
+                document.getElementById('lapBersih').innerText = res.pendapatanBersih.toLocaleString();
+            }).getLaporanBulanan(outlet, bulanTahun);
+        }
+    </script>
+</body>
+</html>
