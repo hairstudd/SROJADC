@@ -372,12 +372,18 @@
             let tanggal = document.getElementById('trxTanggal').value;
             if(!outlet || !tanggal) return;
 
-            fetch(GAS_URL + `?action=getTransaksiHarian&outlet=${encodeURIComponent(outlet)}&tanggal=${tanggal}`)
+            let params = new URLSearchParams({
+                action: "getTransaksiHarian",
+                outlet: outlet,
+                tanggal: tanggal
+            });
+
+            fetch(GAS_URL + "?" + params.toString(), { redirect: "follow" })
                 .then(res => res.json())
                 .then(data => {
                     let tbody = document.querySelector('#tabelTransaksiHarian tbody');
                     tbody.innerHTML = '';
-                    if(data.length === 0) {
+                    if(!data || data.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Belum ada transaksi pada tanggal ini.</td></tr>`;
                         return;
                     }
@@ -421,34 +427,42 @@
             let outlet = document.getElementById('rekapOutlet').value;
             let tanggal = document.getElementById('rekapTanggal').value;
 
-            fetch(GAS_URL + `?action=getRekapitulasi&outlet=${encodeURIComponent(outlet)}&tanggal=${tanggal}`)
+            let params = new URLSearchParams({
+                action: "getRekapitulasi",
+                outlet: outlet,
+                tanggal: tanggal
+            });
+
+            fetch(GAS_URL + "?" + params.toString(), { redirect: "follow" })
                 .then(res => res.json())
                 .then(res => {
                     let tbody = document.querySelector('#tabelRekap tbody');
                     tbody.innerHTML = '';
-                    if(res.transaksi.length === 0) {
+                    if(!res.transaksi || res.transaksi.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Tidak ada data rekap.</td></tr>`;
+                    } else {
+                        res.transaksi.forEach(row => {
+                            let tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                cline<td>${row.tanggal}</td>
+                                <td>${row.jam}</td>
+                                <td>${row.capster}</td>
+                                <td>${row.kategori}</td>
+                                <td>Rp ${row.tarif.toLocaleString()}</td>
+                                <td>${row.metode}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
                     }
-                    res.transaksi.forEach(row => {
-                        let tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td>${row.tanggal}</td>
-                            <td>${row.jam}</td>
-                            <td>${row.capster}</td>
-                            <td>${row.kategori}</td>
-                            <td>Rp ${row.tarif.toLocaleString()}</td>
-                            <td>${row.metode}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
 
-                    document.getElementById('rekapTotalOmzet').innerText = res.totalOmzet.toLocaleString();
-                    document.getElementById('rekapCash').innerText = res.omzetCash.toLocaleString();
-                    document.getElementById('rekapQris').innerText = res.omzetQris.toLocaleString();
-                    document.getElementById('countDewasa').innerText = res.customerCount.dewasa;
-                    document.getElementById('countRemaja').innerText = res.customerCount.remaja;
-                    document.getElementById('countAnak').innerText = res.customerCount.anak;
-                });
+                    document.getElementById('rekapTotalOmzet').innerText = (res.totalOmzet || 0).toLocaleString();
+                    document.getElementById('rekapCash').innerText = (res.omzetCash || 0).toLocaleString();
+                    document.getElementById('rekapQris').innerText = (res.omzetQris || 0).toLocaleString();
+                    document.getElementById('countDewasa').innerText = res.customerCount ? res.customerCount.dewasa : 0;
+                    document.getElementById('countRemaja').innerText = res.customerCount ? res.customerCount.remaja : 0;
+                    document.getElementById('countAnak').innerText = res.customerCount ? res.customerCount.anak : 0;
+                })
+                .catch(err => console.error("Gagal memuat rekap:", err));
         }
 
         function loadLaporan() {
