@@ -6,9 +6,6 @@
     <title>SROJA D'CAPRIO - Kasir Transaksi</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="icon.png">
-    <meta name="theme-color" content="#212529">
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark shadow-sm">
@@ -97,6 +94,12 @@
                                     <input type="date" id="expTanggal" class="form-control" required>
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-label">Kategori Pengeluaran:</label>
+                                    <select id="expKategori" class="form-select" required>
+                                        <option value="">-- Pilih Kategori Pengeluaran --</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">Nominal (Rp):</label>
                                     <input type="number" id="expNominal" class="form-control" required>
                                 </div>
@@ -118,8 +121,8 @@
                                     <th>Tanggal</th>
                                     <th>Jam</th>
                                     <th>Capster</th>
-                                    <th>Kategori (Edit)</th>
-                                    <th>Tarif (Rp) & Metode (Edit)</th>
+                                    <th>Kategori</th>
+                                    <th>Tarif (Rp) & Metode</th>
                                     <th>Aksi Update</th>
                                 </tr>
                             </thead>
@@ -149,7 +152,7 @@
                     </div>
                 </div>
 
-                <div class="table-responsive">
+                <div class="table-responsive mb-3">
                     <table class="table table-bordered" id="tabelRekap">
                         <thead class="table-secondary">
                             <tr>
@@ -170,8 +173,25 @@
                     <p class="mb-1"><strong>Total Omzet:</strong> Rp <span id="rekapTotalOmzet">0</span></p>
                     <p class="mb-1">- Omzet Cash: Rp <span id="rekapCash">0</span></p>
                     <p class="mb-1">- Omzet QRIS: Rp <span id="rekapQris">0</span></p>
+                    <p class="mb-1"><strong>Total Pengeluaran:</strong> Rp <span id="rekapTotalPengeluaran">0</span></p>
                     <hr>
                     <p class="mb-0"><strong>Jumlah Customer:</strong> Dewasa (<span id="countDewasa">0</span>), Remaja (<span id="countRemaja">0</span>), Anak (<span id="countAnak">0</span>)</p>
+                </div>
+
+                <div class="mt-4">
+                    <h5>Rincian Pengeluaran Harian</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm" id="tabelRekapPengeluaran">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Kategori</th>
+                                    <th>Keterangan / Sumber</th>
+                                    <th>Nominal</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -210,7 +230,10 @@
                             <td>: <strong>Rp <span id="lapKotor">0</span></strong></td>
                         </tr>
                         <tr>
-                            <td>Total Pengeluaran Operasional</td>
+                            <td>
+                                Total Pengeluaran Operasional
+                                <div id="lapRincianPengeluaran" style="font-size: 11px; color: #666; margin-top: 4px; line-height: 1.4;"></div>
+                            </td>
                             <td>: (Rp <span id="lapPengeluaran">0</span>)</td>
                         </tr>
                         <tr class="table-success">
@@ -227,18 +250,12 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyKoRUhTGog2lzNsCSVIkNKpZtcenhl-9p4vgZOsKDfswWVKwS1BWhZESjXOJbWqk-V/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwImsbGx_ik_fK1_fec2riDsBtkZ_5AJZwtpCSjpHRxWKORpNSCOO4_nGTnFPsaYvL3/exec"; 
 
-        // Fallback data statis agar halaman langsung terbuka tanpa menunggu fetch pertama
-        let globalCapsterData = {
-            "SROJA": ["Sade", "Asep"],
-            "D'CAPRIO": ["Imam"]
-        };
-        let globalTarifData = {
-            "SROJA": { "Dewasa": 40000, "Anak": 35000 },
-            "D'CAPRIO": { "Dewasa": 30000, "Remaja": 25000, "Anak": 20000 }
-        };
-        let isDataLoaded = true; // Langsung aktif secara instan
+        let globalCapsterData = {};
+        let globalTarifData = {};
+        let globalKategoriPengeluaran = [];
+        let isDataLoaded = false;
 
         window.onload = function() {
             let today = new Date().toISOString().split('T')[0];
@@ -250,27 +267,28 @@
             document.getElementById('rekapTanggal').value = today;
             document.getElementById('lapBulan').value = today.slice(0, 7);
 
-            // Cek apakah ada cache data tersimpan sebelumnya di browser
-            let cachedCapster = localStorage.getItem('sroja_capster');
-            let cachedTarif = localStorage.getItem('sroja_tarif');
-            
-            if (cachedCapster && cachedTarif) {
-                globalCapsterData = JSON.parse(cachedCapster);
-                globalTarifData = JSON.parse(cachedTarif);
-            }
-
-            // Sync data terbaru secara diam-diam di background (non-blocking)
             fetch(GAS_URL + "?action=getAppData")
                 .then(response => response.json())
                 .then(data => {
-                    if(data && data.capsterMap) {
-                        globalCapsterData = data.capsterMap;
-                        globalTarifData = data.tarifMap;
-                        localStorage.setItem('sroja_capster', JSON.stringify(data.capsterMap));
-                        localStorage.setItem('sroja_tarif', JSON.stringify(data.tarifMap));
-                    }
+                    globalCapsterData = data.capsterMap;
+                    globalTarifData = data.tarifMap;
+                    globalKategoriPengeluaran = data.kategoriPengeluaran || [];
+                    isDataLoaded = true;
+
+                    // Isi dropdown kategori pengeluaran di Tab 1
+                    let expKatSelect = document.getElementById('expKategori');
+                    expKatSelect.innerHTML = '<option value="">-- Pilih Kategori Pengeluaran --</option>';
+                    globalKategoriPengeluaran.forEach(function(kat) {
+                        let opt = document.createElement('option');
+                        opt.value = kat;
+                        opt.innerText = kat;
+                        expKatSelect.appendChild(opt);
+                    });
+
+                    let currentOutlet = document.getElementById('selectedOutlet').value;
+                    if(currentOutlet) lockOutlet();
                 })
-                .catch(err => console.log("Background sync offline/skipped"));
+                .catch(err => console.error("Gagal memuat data dari GAS:", err));
         }
 
         function lockOutlet() {
@@ -279,6 +297,11 @@
             
             if (!outlet) {
                 formSec.style.display = 'none';
+                return;
+            }
+
+            if (!isDataLoaded) {
+                alert("Data sistem sedang dimuat, silakan pilih outlet kembali dalam 1 detik.");
                 return;
             }
 
@@ -359,6 +382,7 @@
                 action: "simpanPengeluaran",
                 outlet: document.getElementById('selectedOutlet').value,
                 tanggal: document.getElementById('expTanggal').value,
+                kategoriPengeluaran: document.getElementById('expKategori').value,
                 nominal: document.getElementById('expNominal').value,
                 sumber: document.getElementById('expSumber').value
             });
@@ -402,17 +426,11 @@
                             <td>${row.tanggal}</td>
                             <td>${row.jam}</td>
                             <td>${row.capster}</td>
-                            <td>
-                                <select id="editKategori-${row.rowIdx}" class="form-select form-select-sm" onchange="onEditKategoriChange(${row.rowIdx})">
-                                    <option value="Dewasa" ${row.kategori === 'Dewasa' ? 'selected' : ''}>Dewasa</option>
-                                    <option value="Remaja" ${row.kategori === 'Remaja' ? 'selected' : ''}>Remaja</option>
-                                    <option value="Anak" ${row.kategori === 'Anak' ? 'selected' : ''}>Anak</option>
-                                </select>
-                            </td>
+                            <td>${row.kategori}</td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <input type="number" id="editTarif-${row.rowIdx}" value="${row.tarif}" class="form-control form-control-sm" style="width: 100px;" placeholder="Tarif">
-                                    <select id="editMetode-${row.rowIdx}" class="form-select form-select-sm" style="width: 90px;">
+                                    <input type="number" id="editTarif-${row.rowIdx}" value="${row.tarif}" class="form-control form-control-sm" style="width: 110px;" placeholder="Tarif">
+                                    <select id="editMetode-${row.rowIdx}" class="form-select form-select-sm" style="width: 100px;">
                                         <option value="Cash" ${row.metode === 'Cash' ? 'selected' : ''}>Cash</option>
                                         <option value="QRIS" ${row.metode === 'QRIS' ? 'selected' : ''}>QRIS</option>
                                     </select>
@@ -426,25 +444,13 @@
                 .catch(err => console.error("Gagal memuat transaksi harian:", err));
         }
 
-        function onEditKategoriChange(rowIdx) {
-            let outlet = document.getElementById('selectedOutlet').value;
-            let kategoriBaru = document.getElementById(`editKategori-${rowIdx}`).value;
-            let tarifInput = document.getElementById(`editTarif-${rowIdx}`);
-
-            if (outlet && kategoriBaru && globalTarifData[outlet] && globalTarifData[outlet][kategoriBaru] !== undefined) {
-                tarifInput.value = globalTarifData[outlet][kategoriBaru];
-            }
-        }
-
         function updateTransaksi(rowIdx) {
-            let kategoriBaru = document.getElementById(`editKategori-${rowIdx}`).value;
             let tarifBaru = document.getElementById(`editTarif-${rowIdx}`).value;
             let metodeBaru = document.getElementById(`editMetode-${rowIdx}`).value;
             
             let params = new URLSearchParams({
                 action: "updateTransaksi",
                 rowIdx: rowIdx,
-                kategoriBaru: kategoriBaru,
                 tarifBaru: tarifBaru,
                 metodeBaru: metodeBaru
             });
@@ -474,28 +480,48 @@
             fetch(GAS_URL + "?" + params.toString(), { redirect: "follow" })
                 .then(res => res.json())
                 .then(res => {
+                    // Tabel Transaksi Harian
                     let tbody = document.querySelector('#tabelRekap tbody');
                     tbody.innerHTML = '';
                     if(!res.transaksi || res.transaksi.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Tidak ada data rekap.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Tidak ada data rekap transaksi.</td></tr>`;
                     } else {
                         res.transaksi.forEach(row => {
                             let tr = document.createElement('tr');
                             tr.innerHTML = `
                                 <td>${row.tanggal}</td>
-                            <td>${row.jam}</td>
-                            <td>${row.capster}</td>
-                            <td>${row.kategori}</td>
-                            <td>Rp ${row.tarif.toLocaleString()}</td>
-                            <td>${row.metode}</td>
+                                <td>${row.jam}</td>
+                                <td>${row.capster}</td>
+                                <td>${row.kategori}</td>
+                                <td>Rp ${row.tarif.toLocaleString()}</td>
+                                <td>${row.metode}</td>
                             `;
                             tbody.appendChild(tr);
                         });
                     }
 
+                    // Tabel Pengeluaran Harian
+                    let tbodyExp = document.querySelector('#tabelRekapPengeluaran tbody');
+                    tbodyExp.innerHTML = '';
+                    if(!res.pengeluaranHarian || res.pengeluaranHarian.length === 0) {
+                        tbodyExp.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Tidak ada pengeluaran pada tanggal ini.</td></tr>`;
+                    } else {
+                        res.pengeluaranHarian.forEach(exp => {
+                            let tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><span class="badge bg-secondary">${exp.kategori}</span></td>
+                                <td>${exp.sumber}</td>
+                                <td>Rp ${exp.nominal.toLocaleString()}</td>
+                            `;
+                            tbodyExp.appendChild(tr);
+                        });
+                    }
+
+                    // Ringkasan Rekap
                     document.getElementById('rekapTotalOmzet').innerText = (res.totalOmzet || 0).toLocaleString();
                     document.getElementById('rekapCash').innerText = (res.omzetCash || 0).toLocaleString();
                     document.getElementById('rekapQris').innerText = (res.omzetQris || 0).toLocaleString();
+                    document.getElementById('rekapTotalPengeluaran').innerText = (res.totalPengeluaranHarian || 0).toLocaleString();
                     document.getElementById('countDewasa').innerText = res.customerCount ? res.customerCount.dewasa : 0;
                     document.getElementById('countRemaja').innerText = res.customerCount ? res.customerCount.remaja : 0;
                     document.getElementById('countAnak').innerText = res.customerCount ? res.customerCount.anak : 0;
@@ -515,7 +541,26 @@
                     document.getElementById('lapKotor').innerText = res.pendapatanKotor.toLocaleString();
                     document.getElementById('lapPengeluaran').innerText = res.pengeluaran.toLocaleString();
                     document.getElementById('lapBersih').innerText = res.pendapatanBersih.toLocaleString();
-                });
+
+                    // Rincian Pengeluaran Bulanan berukuran kecil di bawah Total Pengeluaran
+                    let rincianDiv = document.getElementById('lapRincianPengeluaran');
+                    rincianDiv.innerHTML = '';
+                    if (res.rincianPengeluaran) {
+                        let htmlRincian = [];
+                        for (let kat in res.rincianPengeluaran) {
+                            let nominalKat = res.rincianPengeluaran[kat];
+                            if (nominalKat > 0) {
+                                htmlRincian.append ? null : htmlRincian.push(`• ${kat}: Rp ${nominalKat.toLocaleString()}`);
+                            }
+                        }
+                        if (htmlRincian.length > 0) {
+                            rincianDiv.innerHTML = htmlRincian.join('<br>');
+                        } else {
+                            rincianDiv.innerHTML = '• Tidak ada rincian pengeluaran';
+                        }
+                    }
+                })
+                .catch(err => console.error("Gagal memuat laporan bulanan:", err));
         }
     </script>
 </body>
