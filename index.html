@@ -250,7 +250,7 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwImsbGx_ik_fK1_fec2riDsBtkZ_5AJZwtpCSjpHRxWKORpNSCOO4_nGTnFPsaYvL3/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbw5onPf45442fLt5GsJBTWAta13pazKHQzoc50d1FNrbjd3r0zjOONGvWk7q66OL5o/exec"; 
 
         let globalCapsterData = {};
         let globalTarifData = {};
@@ -275,7 +275,6 @@
                     globalKategoriPengeluaran = data.kategoriPengeluaran || [];
                     isDataLoaded = true;
 
-                    // Isi dropdown kategori pengeluaran di Tab 1
                     let expKatSelect = document.getElementById('expKategori');
                     expKatSelect.innerHTML = '<option value="">-- Pilih Kategori Pengeluaran --</option>';
                     globalKategoriPengeluaran.forEach(function(kat) {
@@ -480,7 +479,6 @@
             fetch(GAS_URL + "?" + params.toString(), { redirect: "follow" })
                 .then(res => res.json())
                 .then(res => {
-                    // Tabel Transaksi Harian
                     let tbody = document.querySelector('#tabelRekap tbody');
                     tbody.innerHTML = '';
                     if(!res.transaksi || res.transaksi.length === 0) {
@@ -500,7 +498,6 @@
                         });
                     }
 
-                    // Tabel Pengeluaran Harian
                     let tbodyExp = document.querySelector('#tabelRekapPengeluaran tbody');
                     tbodyExp.innerHTML = '';
                     if(!res.pengeluaranHarian || res.pengeluaranHarian.length === 0) {
@@ -517,7 +514,6 @@
                         });
                     }
 
-                    // Ringkasan Rekap
                     document.getElementById('rekapTotalOmzet').innerText = (res.totalOmzet || 0).toLocaleString();
                     document.getElementById('rekapCash').innerText = (res.omzetCash || 0).toLocaleString();
                     document.getElementById('rekapQris').innerText = (res.omzetQris || 0).toLocaleString();
@@ -542,7 +538,6 @@
                     document.getElementById('lapPengeluaran').innerText = res.pengeluaran.toLocaleString();
                     document.getElementById('lapBersih').innerText = res.pendapatanBersih.toLocaleString();
 
-                    // Rincian Pengeluaran Bulanan berukuran kecil di bawah Total Pengeluaran
                     let rincianDiv = document.getElementById('lapRincianPengeluaran');
                     rincianDiv.innerHTML = '';
                     if (res.rincianPengeluaran) {
@@ -550,7 +545,7 @@
                         for (let kat in res.rincianPengeluaran) {
                             let nominalKat = res.rincianPengeluaran[kat];
                             if (nominalKat > 0) {
-                                htmlRincian.append ? null : htmlRincian.push(`• ${kat}: Rp ${nominalKat.toLocaleString()}`);
+                                htmlRincian.push(`• ${kat}: Rp ${nominalKat.toLocaleString()}`);
                             }
                         }
                         if (htmlRincian.length > 0) {
